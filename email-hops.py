@@ -4,22 +4,23 @@ import subprocess
 
 # function to get the abuse email from WHOIS
 def get_abuse_email(domain):
-    try:
-        whois_output = subprocess.check_output(['whois', domain]).decode('utf-8')
-        email_regex = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-        abuse_regex = r'abuse@' + domain
-        match = re.search(abuse_regex, whois_output, re.IGNORECASE)
-        if match:
-            return match.group(0)
-        else:
-            match = re.search(email_regex, whois_output)
-            if match:
-                return match.group(0)
-            else:
-                return None
-    except Exception as e:
-        print(f"Failed to get abuse email for {domain}: {e}")
+    # make sure domain only contains the domain name and its tld extension
+    match = re.search(r"\b([a-zA-Z0-9]+\.[a-zA-Z]{2,})\b", domain)
+    if match:
+        domain = match.group(1)
+    else:
+        print(f"Invalid domain name: {domain}")
         return None
+
+    process = subprocess.run(["whois", domain], capture_output=True, text=True)
+    output = process.stdout
+    match = re.search(r"Registrar Abuse Contact Email: (.+)", output)
+    if match:
+        abuse_contact_email = match.group(1)
+        print(f"\nAbuse contact email for {domain}: {abuse_contact_email}")
+    else:
+        print(f"Couldn't find the Registrar Abuse Contact Email field in the WHOIS output of {domain}")
+    return None
 
 # function to extract headers and body from .eml file
 def parse_eml_file(file_path):
@@ -39,7 +40,7 @@ def extract_emails_from_headers(headers):
     hops = re.findall(r"Received: from ([a-zA-Z0-9._%+-]+\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})", headers, re.IGNORECASE)
     # trim subdomain from last hop
     if hops:
-        last_hop = hops[-1].split('.', 1)[-1]
+        last_hop = hops[-1].rsplit('.', 2)[-2] + "." + hops[-1].rsplit('.', 2)[-1]
         hops[-1] = last_hop
     return hops
 
@@ -65,11 +66,6 @@ if __name__ == '__main__':
     # get abuse email for last hop
     if hops:
         last_hop = hops[-1]
-
-        abuse_email = get_abuse_email(last_hop)
-        if abuse_email:
-            print(f"Abuse email for {last_hop}: {abuse_email}")
-        else:
-            print(f"No abuse email found for {last_hop}")
+        get_abuse_email(last_hop)
     else:
         print("No hops found in headers")
