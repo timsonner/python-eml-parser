@@ -19,7 +19,8 @@ def get_abuse_email(domain):
         abuse_contact_email = match.group(1)
         print(f"\nAbuse contact email for {domain}: {abuse_contact_email}")
     else:
-        print(f"Couldn't find the Registrar Abuse Contact Email field in the WHOIS output of {domain}")
+        print(f"Couldn't find the Registrar Abuse Contact Email field for {domain}")
+        print(f"Try running 'whois {domain}' to see if an alternate whois database exists")
     return None
 
 # function to extract headers and body from .eml file
