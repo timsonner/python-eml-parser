@@ -21,7 +21,6 @@ headers = email_parts[0].split('\n')
 delivered_to = None
 to = None
 cc = None
-references = None
 body = None
 
 for header in headers:
@@ -31,8 +30,6 @@ for header in headers:
         to = header.split(":")[1].strip()
     elif header.startswith("CC:"):
         cc = header.split(":")[1].strip()
-    elif header.startswith("References:"):
-        references = header.split(":")[1].strip()
         
 # If "CC" header does not exist, set cc to an empty string
 if cc is None:
@@ -42,34 +39,9 @@ if cc is None:
 if len(email_parts) > 1:
     body = email_parts[1].strip()
 
-# Find email path
-references_list = [ref.strip() for ref in references.split() if ref.strip()]
-if references_list:
-    email_path = references_list[-1]
-else:
-    email_path = ""
-
-# Find abuse email using WHOIS lookup
-abuse_email = None
-
-if email_path:
-    hops = email_path.split('>')
-    last_hop = hops[-1].strip()
-    domain = last_hop.split('@')[-1].strip()
-    
-    try:
-        whois_output = subprocess.check_output(['whois', domain]).decode('utf-8')
-        abuse_email_match = re.search(r'abuse(?:-contact)?\s*:\s*([\w.-]+@[\w.-]+)', whois_output, re.IGNORECASE)
-        
-        if abuse_email_match:
-            abuse_email = abuse_email_match.group(1)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass
 
 # Print results
 print("Delivered-To: ", delivered_to)
 print("To: ", to)
 print("CC: ", cc)
-print("References: ", references)
 print("Body: ", body)
-print("Abuse Email: ", abuse_email if abuse_email else "N/A")
