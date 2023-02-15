@@ -1,63 +1,75 @@
 import sys
-import email
-import quopri
+import re
+import subprocess
 
-def get_first_text_block(msg):
-    for part in msg.walk():
-        if part.get_content_type() == 'text/plain':
-            try:
-                text = part.get_payload(decode=True).decode(part.get_content_charset(), 'ignore')
-                return text.strip()
-            except:
-                pass
-    return None
-
+# Read email file path from command line arguments
 if len(sys.argv) < 2:
-    print("Usage: python eml_parser.py <filename>")
-    sys.exit(1)
+    print("Please provide an email file path as a command line argument.")
+    sys.exit()
 
-filename = sys.argv[1]
+email_file = sys.argv[1]
 
-with open(filename, 'r') as f:
-    msg = email.message_from_file(f)
+# Parse email headers and body
+with open(email_file, 'r') as f:
+    email = f.read()
 
-    # Parse the From, To, Cc, Subject, Delivered-To, and Date headers
-    sender = msg['From']
-    recipient = msg['To']
-    cc = msg['Cc']
-    subject = msg['Subject']
-    delivered_to = msg['Delivered-To']
-    date = msg['Date']
+# Split email into headers and body
+email_parts = email.split('\n\n', 1)
+headers = email_parts[0].split('\n')
 
-    # Parse the main body of the email
-    body = get_first_text_block(msg)
+# Get Delivered-To, To, CC, References, and Body headers
+delivered_to = None
+to = None
+cc = None
+references = None
+body = None
 
-    # Parse the received headers to get the email path
-    received = msg.get_all('Received')
-    path = []
-    if received:
-        for r in received:
-            # Extract the IP address of the sender
-            ip = r.split('[')[-1].split(']')[0]
-            # Add the hop to the path
-            path.append((r, ip))
+for header in headers:
+    if header.startswith("Delivered-To:"):
+        delivered_to = header.split(":")[1].strip()
+    elif header.startswith("To:"):
+        to = header.split(":")[1].strip()
+    elif header.startswith("CC:"):
+        cc = header.split(":")[1].strip()
+    elif header.startswith("References:"):
+        references = header.split(":")[1].strip()
+        
+# If "CC" header does not exist, set cc to an empty string
+if cc is None:
+    cc = ""
 
-    # Print out the results
-    print("From: {}".format(sender))
-    print("To: {}".format(recipient))
-    print("Cc: {}".format(cc))
-    print("Subject: {}".format(subject))
-    print("Delivered-To: {}".format(delivered_to))
-    print("Date: {}".format(date))
-    #print("Body: {}".format(body))
-    if path:
-        print("\nEmail path:")
-        for i, (hop, ip) in enumerate(path):
-            hop_desc = "Hop {}".format(i+1)
-            if i == 0:
-                hop_desc = "First hop (sender)"
-            elif i == len(path)-1:
-                hop_desc = "Final destination"
-            print("{} - {} - IP: {}".format(hop_desc, hop, ip))
-    else:
-        print("\nEmail path: No Received headers found.")
+# Get email body
+if len(email_parts) > 1:
+    body = email_parts[1].strip()
+
+# Find email path
+references_list = [ref.strip() for ref in references.split() if ref.strip()]
+if references_list:
+    email_path = references_list[-1]
+else:
+    email_path = ""
+
+# Find abuse email using WHOIS lookup
+abuse_email = None
+
+if email_path:
+    hops = email_path.split('>')
+    last_hop = hops[-1].strip()
+    domain = last_hop.split('@')[-1].strip()
+    
+    try:
+        whois_output = subprocess.check_output(['whois', domain]).decode('utf-8')
+        abuse_email_match = re.search(r'abuse(?:-contact)?\s*:\s*([\w.-]+@[\w.-]+)', whois_output, re.IGNORECASE)
+        
+        if abuse_email_match:
+            abuse_email = abuse_email_match.group(1)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+
+# Print results
+print("Delivered-To: ", delivered_to)
+print("To: ", to)
+print("CC: ", cc)
+print("References: ", references)
+print("Body: ", body)
+print("Abuse Email: ", abuse_email if abuse_email else "N/A")
