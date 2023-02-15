@@ -37,8 +37,12 @@ def parse_eml_file(file_path):
 # function to extract email addresses from headers
 def extract_emails_from_headers(headers):
     hops = re.findall(r"Received: from ([a-zA-Z0-9._%+-]+\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})", headers, re.IGNORECASE)
-    
+    # trim subdomain from last hop
+    if hops:
+        last_hop = hops[-1].split('.', 1)[-1]
+        hops[-1] = last_hop
     return hops
+
 
 if __name__ == '__main__':
     # check if file path is provided
@@ -61,6 +65,7 @@ if __name__ == '__main__':
     # get abuse email for last hop
     if hops:
         last_hop = hops[-1]
+
         abuse_email = get_abuse_email(last_hop)
         if abuse_email:
             print(f"Abuse email for {last_hop}: {abuse_email}")
