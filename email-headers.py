@@ -1,16 +1,19 @@
-import email
-import argparse
+import sys
 
-# Set up the command line arguments
-parser = argparse.ArgumentParser(description="Parse an .eml file and return the headers.")
-parser.add_argument("filename", help="Path to the .eml file.")
+# Read email file path from command line arguments
+if len(sys.argv) < 2:
+    print("Please provide an email file path as a command line argument.")
+    sys.exit()
 
-# Parse the command line arguments
-args = parser.parse_args()
+email_file = sys.argv[1]
 
-with open(args.filename, "r") as f:
-    msg = email.message_from_file(f)
+# Parse email headers and body
+with open(email_file, 'r') as f:
+    email = f.read()
 
-# Print out the headers
-for header in msg.keys():
-    print(f"{header}: {msg[header]}")
+# Split email into headers and body
+email_parts = email.split('\n\n', 1)
+headers = email_parts[0]
+
+# Print raw headers
+print(headers)
