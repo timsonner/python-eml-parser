@@ -1,10 +1,8 @@
 import sys
-import re
-import subprocess
 
 # Read email file path from command line arguments
 if len(sys.argv) < 2:
-    print("Please provide an email file path as a command line argument.")
+    print("Please provide the path to the .eml file as an argument.")
     sys.exit()
 
 email_file = sys.argv[1]
