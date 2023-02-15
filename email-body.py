@@ -17,11 +17,12 @@ with open(email_file, 'r') as f:
 email_parts = email.split('\n\n', 1)
 headers = email_parts[0].split('\n')
 
-# Get Delivered-To, To, CC, References, and Body headers
+# Get Delivered-To, To, CC, References, From, and Body headers
 delivered_to = None
 to = None
 cc = None
 body = None
+frm = None
 
 for header in headers:
     if header.startswith("Delivered-To:"):
@@ -30,6 +31,8 @@ for header in headers:
         to = header.split(":")[1].strip()
     elif header.startswith("CC:"):
         cc = header.split(":")[1].strip()
+    elif header.startswith("From:"):
+        frm = header.split(":")[1].strip()
         
 # If "CC" header does not exist, set cc to an empty string
 if cc is None:
@@ -39,8 +42,8 @@ if cc is None:
 if len(email_parts) > 1:
     body = email_parts[1].strip()
 
-
 # Print results
+print("From: ", frm)
 print("Delivered-To: ", delivered_to)
 print("To: ", to)
 print("CC: ", cc)
